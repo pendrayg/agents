@@ -8,3 +8,6 @@ Promote a rule into `SKILL.md` and drop its rows once it has recurred 3×: run `
 
 | date | score | tag | règle |
 |------|-------|-----|-------|
+| 2026-10-12 | 4 | commit-author | Un hook de garde-fou bloque tout `git commit` sans `--author="Claude <Modèle> <noreply@anthropic.com>"` : poser ce flag dès le premier commit, sans attendre le refus. |
+| 2026-10-12 | 4 | branche-defaut | Ne jamais présumer que la branche par défaut est `main` : la lire (`gh repo view --json defaultBranchRef`) et brancher depuis elle — certains dépôts vivent sur une branche de travail. |
+| 2026-10-12 | 4 | typecheck-vs-rendu | Après un saut de version d'un design system, un typecheck et un build verts ne disent RIEN du rendu : signaler explicitement le risque de régression visuelle dans le rapport et la PR. |
