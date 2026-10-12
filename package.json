@@ -1,5 +1,5 @@
 {
-  "name": "@yoannyviquel/it-agents",
+  "name": "@pendrayg/it-agents",
   "version": "0.1.1",
   "description": "Claude Code plugin bundling specialized development agents (dotnet-developer, react-developer) as skills.",
   "private": true,

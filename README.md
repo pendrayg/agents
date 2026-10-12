@@ -9,10 +9,10 @@ A Claude Code plugin bundling **five specialized development agents as skills**.
 [![version](https://img.shields.io/badge/version-1.6.0-f59e0b?style=for-the-badge)](./.claude-plugin/plugin.json)
 [![Claude Code](https://img.shields.io/badge/Claude_Code-skills-f59e0b?style=for-the-badge&logo=anthropic&logoColor=white)](https://docs.claude.com/en/docs/claude-code)
 [![skills](https://img.shields.io/badge/skills-5-f59e0b?style=for-the-badge)](#-the-agents)
-[![marketplace](https://img.shields.io/badge/marketplace-yoannyviquel-14b8a6?style=for-the-badge)](https://github.com/yoannyviquel/marketplace)
+[![marketplace](https://img.shields.io/badge/marketplace-pendrayg-14b8a6?style=for-the-badge)](https://github.com/pendrayg/marketplace)
 
 ```sh
-/plugin marketplace add yoannyviquel/marketplace
+/plugin marketplace add pendrayg/marketplace
 /plugin install agents
 ```
 
@@ -70,7 +70,7 @@ You can also invoke a skill explicitly via the Skill tool, e.g. `Skill(skill: "a
 ## 🚀 Install
 
 ```text
-/plugin marketplace add yoannyviquel/marketplace
+/plugin marketplace add pendrayg/marketplace
 /plugin install agents
 ```
 
@@ -121,6 +121,6 @@ agents/
 
 <div align="center">
 
-© Yoann Yviquel · Part of the [**yoannyviquel** marketplace](https://github.com/yoannyviquel/marketplace)
+© Yoann Yviquel · Part of the [**pendrayg** marketplace](https://github.com/pendrayg/marketplace)
 
 </div>
