@@ -113,19 +113,24 @@ function claimOnce(sessionId, toolUseId) {
 
 function reason(agent, candidates) {
   return [
-    `Le sous-agent \`${agent}\` a livré sans gate de scoring. Avant de rendre la main, lance un seul AskUserQuestion à deux questions :`,
+    `Le sous-agent \`${agent}\` a livré sans gate de scoring. Avant de rendre la main :`,
     ``,
-    `**Q1 — header "Score"** : "Qualité de la livraison ${agent} ?"`,
-    `  4 — parfait (mergeable tel quel) · 3 — retouches (ajustements mineurs) · 2 — corrections (reprise significative) · 1 — à refaire (inutilisable)`,
+    `**1. Rappelle la livraison dans le chat.** L'utilisateur n'a pas vu le sous-agent travailler : on ne note pas un code qu'on n'a pas sous les yeux. 10 lignes maximum — fichiers créés/modifiés et ce qui a changé dans chacun, puis les 2-3 décisions qui méritent un œil. Appuie-toi sur le rapport de l'agent et, si le dépôt est sous git, sur \`git diff --stat\`. Ce récap passe AVANT la gate, pas après.`,
     ``,
-    `**Q2 — header "Apprentissage"**, multiSelect : "Que dois-je retenir ?"`,
-    `  Options = les candidats du bloc SCORE-GATE ci-dessous + "Rien à retenir". L'utilisateur peut toujours saisir le sien via "Other".`,
+    `**2. Puis un seul AskUserQuestion** — apprentissages d'abord, note en DERNIÈRE question : on juge une fois qu'on a lu.`,
+    ``,
+    `  • Questions d'apprentissage, multiSelect, header \`À retenir\` : "Que dois-je retenir ?". Options = **4 candidats, rien d'autre** : ce sont des cases à cocher, ne rien cocher vaut "rien à retenir" et "Other" reste là pour la formulation de l'utilisateur — pas d'option de sortie qui gâcherait un emplacement. Plus de 4 candidats → pagine : headers \`À retenir 1\`, \`À retenir 2\`, \`À retenir 3\`, jusqu'à 12. Au-delà, garde les 12 plus spécifiques à cette tâche.`,
+    `  • **Dernière question, header \`Score\`** : "Qualité de la livraison ${agent} ?" — 4 parfait (mergeable tel quel) · 3 retouches (ajustements mineurs) · 2 corrections (reprise significative) · 1 à refaire (inutilisable).`,
     ``,
     candidates
       ? `Bloc SCORE-GATE remonté par l'agent :\n\`\`\`\n${candidates}\n\`\`\``
-      : `⚠️ L'agent n'a pas remonté de bloc SCORE-GATE. Propose toi-même 2-3 candidats d'après ce que la tâche a révélé.`,
+      : `⚠️ L'agent n'a pas remonté de bloc SCORE-GATE. Propose toi-même 2-3 candidats d'après ce que la tâche a révélé, et tire la \`source\` de ce que tu as vu dans ce tour.`,
     ``,
-    `Puis : si score ≤ 2 OU au moins un apprentissage retenu, append une ligne par apprentissage dans \`skills/${agent}/LEARNINGS.md\` (table existante, date du jour, tag court). Sinon n'écris rien. Enfin, rends la main.`,
+    `**3. Écris.** Si score ≤ 2 OU au moins un apprentissage retenu, append une ligne par apprentissage dans \`skills/${agent}/LEARNINGS.md\` (table existante, date du jour, tag court). Sinon n'écris rien. Enfin, rends la main.`,
+    ``,
+    `Colonne \`source\` de cette table : la \`source:\` du bloc SCORE-GATE si l'agent en a remonté une, sinon la référence canonique de la tâche telle que tu l'as vue dans ce tour — URL de PR / de ticket, sinon \`repo@sha\`, sinon \`repo:chemin/du/fichier\`, sinon l'outil ou le paquet concerné. Rien d'identifiable, ou un doute : écris \`—\`. Jamais d'URL devinée, et ne présuppose ni Jira ni GitHub.`,
+    ``,
+    `⚠️ Une règle, une ligne. Tu relis la table de toute façon pour l'éditer : avant d'appender, cherche la ligne qui dit DÉJÀ la même chose — la formulation diffère toujours, c'est la leçon qui compte (un candidat \`affine <tag>\` te la désigne directement). Trouvée ? N'ajoute PAS de ligne : ajoute la source à cette ligne (séparateur \` · \`, sans doublonner une source déjà présente), remonte sa date, garde le pire des deux scores. Sinon seulement, crée la ligne — en réutilisant un tag existant s'il convient.`,
   ].join("\n");
 }
 

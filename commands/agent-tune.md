@@ -16,6 +16,10 @@ Target agent: `$1`. Not supplied, or not one of the four dev agents → list the
 
 2. Group the rows by what they actually say, not by their `tag` column — the same mistake gets tagged three different ways. A group of **3 rows or more is a candidate for promotion**; so is any single row with score 1, which signals a mistake bad enough that it must not need repeating to count.
 
+   Count recurrence in **distinct sources, not in rows**. A single row listing three sources (` · ` separated) already is the same rule learned three times and promotes on its own. Conversely, three rows sharing one source are one bad day on one task — keep them unless the rule reads as general. Rows with `—` count, but evidence made only of `—` is weak; say so when presenting it.
+
+   Any group you find here is a merge the gate missed. Whether or not the user promotes it, collapse the group into one row — sources joined, latest date, worst score — before finishing.
+
 3. For each candidate, write the hard rule as it would appear in `SKILL.md`: imperative, checkable, no backstory. "Chercher un Profile AutoMapper existant avant d'en créer un", not "L'utilisateur a constaté des doublons de mapping".
 
 4. Present the candidates with AskUserQuestion (multiSelect) — label = the rule, description = how many rows back it and the worst score. The user decides what gets promoted; a rule they reject stays in `LEARNINGS.md` untouched.
@@ -26,6 +30,6 @@ Target agent: `$1`. Not supplied, or not one of the four dev agents → list the
 
 ## Guardrails
 
-- Never rewrite a rule the user didn't approve, never delete a row that wasn't promoted.
+- Never rewrite a rule the user didn't approve, never delete a row that wasn't promoted. Merging duplicates is the one exception: collapsing rows that say the same thing loses no lesson, as long as the surviving wording covers every row it absorbs and keeps their sources. Anything beyond that is a rewrite — ask.
 - A promoted rule must not contradict an existing one in `SKILL.md`. If it does, surface the conflict and let the user arbitrate — do not silently resolve it.
 - This edits the plugin itself, which lives in git. Changes go on a branch and through a PR to `main`, never a direct commit on `main`.

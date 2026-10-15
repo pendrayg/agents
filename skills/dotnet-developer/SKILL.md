@@ -382,10 +382,15 @@ Constraints:
 ```
 SCORE-GATE: dotnet-developer
 tâche: <une ligne, ce que tu viens de livrer>
+source: <référence canonique de la tâche, ou "—">
 candidats:
 - <titre court> | <règle actionnable à écrire dans LEARNINGS.md>
 - <titre court> | <règle actionnable>
-- <titre court> | <règle actionnable>
+- affine <tag-existant> | <la règle déjà listée que cette tâche confirme ou précise>
 ```
+
+`source` feeds the column of the same name in `LEARNINGS.md`: the most canonical reference you actually have for this task, in that order — the PR or ticket URL if one exists, else `repo@sha` of the commit you produced, else `repo:path/to/the/file` you worked in, else the tool or package the lesson is about. `—` when nothing identifies it. Report what you saw; never guess a URL, and never assume the repo lives on a given host or tracker.
+
+**Check your candidates against `LEARNINGS.md` — you read it before planning, it is in your context.** A lesson an existing row already covers is not a candidate. When this task confirms or sharpens such a row, propose it as `affine <tag>` instead: the orchestrator will add your source to that row rather than create a twin, and a row that gathers three sources is what gets promoted into this file. Reuse an existing tag whenever one fits.
 
 Two or three candidates, no more. They come from this task — a trade-off you were unsure of, a convention you guessed, a shortcut you took — never from a generic checklist. No real doubt on this task? Emit the block with `candidats: (aucun)`.

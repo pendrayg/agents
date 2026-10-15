@@ -82,11 +82,15 @@ The skills become available immediately — no build step (pure Markdown + bundl
 
 The four dev agents keep a `LEARNINGS.md` next to their `SKILL.md` and read it before planning anything.
 
-How a line gets in there: a `Stop` hook watches for a dev agent that delivered without being scored, and blocks the turn until you are asked two questions — a score out of 4, then what the agent should learn. The candidate learnings are proposed by the agent itself (it ends its report with a `SCORE-GATE:` block listing what it hesitated on), so the common case is two clicks. A clean delivery with nothing to learn writes nothing: only mistakes accumulate.
+How a line gets in there: a `Stop` hook watches for a dev agent that delivered without being scored, and blocks the turn until the session recaps what was actually produced — files touched, notable decisions — and then asks you what the agent should learn, and only last, as a score out of 4. Learnings before the score, because you grade once you have read. The candidates are proposed by the agent itself (it ends its report with a `SCORE-GATE:` block listing what it hesitated on), four per question, paginated when there are more. A clean delivery with nothing to learn writes nothing: only mistakes accumulate.
 
 The gate blocks at most once per delivery — if the orchestrator ignores it, the turn ends normally rather than deadlocking.
 
-`LEARNINGS.md` is short-term memory and costs context on every task. Once a rule has recurred three times, `/agent-tune <agent>` promotes it into `SKILL.md` and prunes the rows. That promotion is the actual learning; the rest is just a log.
+Each row carries a `source` — where the lesson comes from, in the spirit of an OKF v0.2 `sources[].resource`: a URL when there is one (PR, ticket, issue, doc), else a local ref like `repo@sha` or `repo:path/to/file.ts`, else `—`. No tracker is assumed; nothing here is tied to Jira or to GitHub.
+
+One rule, one row. The same lesson learned twice does not add a row, it adds a source to the row that already carries it — so the source column doubles as the recurrence counter. Three guards keep it that way: the agent filters its candidates against the file it read before planning (and proposes `affine <tag>` when a task only sharpens an existing row), the hook makes the orchestrator look for that row before appending, and `/agent-tune` collapses whatever still slipped through.
+
+`LEARNINGS.md` is short-term memory and costs context on every task. Once a rule has recurred three times — across three *different* sources — `/agent-tune <agent>` promotes it into `SKILL.md` and prunes the rows. That promotion is the actual learning; the rest is just a log.
 
 Self-check: `node hooks/test-score-gate.js`.
 
