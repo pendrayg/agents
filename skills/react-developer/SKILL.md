@@ -124,6 +124,10 @@ Before completing any story:
 - Manual testing for user-facing features
 - Self code review using [code review template](templates/code-review.template.md)
 
+**Ne jamais conclure à une régression sans l'avoir isolée :** rejouer le test fautif seul avec un timeout élargi (`--testTimeout=30000` — sur un poste lent, `Test timed out in 5000ms` dans un fichier non touché n'est pas une régression), redémarrer proprement le serveur de dev avant de croire une anomalie vue au navigateur, vérifier que le défaut ne PRÉEXISTAIT pas (un bug signalé juste après un changement n'en vient pas forcément — ça change l'endroit où l'on corrige) et qu'il ne vient pas du périmètre d'un agent voisin travaillant en parallèle. Dire dans le rapport qu'on n'a PAS comparé à un checkout vierge de la branche de base quand c'est le cas.
+
+**Rapport honnête — dire ce qui n'a pas été vérifié :** nommer les CONSÉQUENCES VISIBLES du lot (géométrie changée, vide laissé dans la mise en page), pas seulement les consignes respectées ; chiffrer avec leurs mesures les objectifs atteints seulement sur une partie du domaine plutôt que de présenter le cas favorable ; vérifier que les fixtures réutilisées couvrent le cas NOMINAL et désigner la moins solide du lot (une fixture « au propre » écrite sans avoir capturé le vrai rendu passe au vert là où le réel échouerait) ; poser en TODO nommé, valeur attendue incluse, tout détail demandé qu'on n'a pas pu regarder, au lieu de le noyer parmi les écarts assumés ; et quand une valeur reste introuvable dans les fichiers lisibles, l'écrire plutôt que de l'omettre.
+
 ## Code Quality Standards
 
 See [REFERENCE.md](REFERENCE.md) for complete standards. Key requirements:
@@ -134,6 +138,9 @@ See [REFERENCE.md](REFERENCE.md) for complete standards. Key requirements:
 - DRY principle - extract common logic
 - Explicit error handling, never swallow errors
 - Comments explain "why" not "what"
+- **Point unique de dérivation** : quand deux valeurs doivent rester égales, extraire LE terme dont tout le calcul dérive et n'agir que là — jamais deux formules jumelles, elles divergent au premier recalibrage. Le test épingle que CHAQUE formule passe par la variable, pas seulement que la bascule existe.
+- **Repli explicite, jamais `undefined` par accident** : dès qu'un repli ferait disparaître un signal visuel, une garde (mode démo) ou un champ de DTO, décider la valeur et l'écrire — `?? []` au point d'entrée dès l'ajout du champ, classe d'icône sondée (`getComputedStyle(el,'::before').content`) avant d'être posée, dans les DEUX états d'une bascule.
+- **Avant de défaire un mécanisme, chercher pourquoi il est là** : commentaires, historique du fichier — la demande est peut-être un retour en arrière sur une décision documentée. Plusieurs mécanismes produisant le même symptôme → faire confirmer lequel on retire avant de toucher au code. Réécrire les commentaires avec le nouveau « pourquoi » et la mémoire de ce qu'on défait, jamais les effacer mécaniquement.
 
 **UI architecture:**
 - All React components MUST respect Atomic Design (atoms / molecules / organisms / templates / pages). See [Design Constraint: Atomic Design](#design-constraint-atomic-design).
@@ -146,8 +153,9 @@ Apply the team's React/TS conventions proactively — they are distilled from re
 - **Props**: pass the object instead of many scalar props (≤ 3–4 scalars); avoid deep prop drilling (→ Context).
 - **TypeScript**: reuse existing types; `import type` for type-only imports; use existing constants/enums, no magic literals.
 - **i18n**: build keys from the enum (`kebabCase(value)`); `<Trans>` for translations containing markup.
-- **Design System (`@cdiscount/design-system`)**: keep components iso, never resize icons manually, reuse DS components.
+- **Design System (`@cdiscount/design-system`)**: keep components iso, never resize icons manually, reuse DS components. **Lire ce que le paquet rend VRAIMENT** (son `dist` : liste `ICONS` — type fermé —, DOM réellement rendu, feuille du composant) avant d'utiliser, de remplacer ou de déshabiller un composant du DS, plutôt que la classe locale ou l'ancien composant : c'est là qu'on voit l'`aria-label` disparu, la règle locale devenue redondante et le relief porté hors de la boîte. Signaler l'écart de rendu qu'aucun test ne voit. Élément volontairement discret (un trait, une poignée) : partir du natif plutôt que déshabiller le DS, en reprenant explicitement ce qu'il donnait gratuitement (focus visible, cible tactile de 24 px).
 - **Tests (Testing Library)**: a test per behavior change (placed where the behavior lives), cover negative/complementary cases, scope with `within()`, prefer `ByRole`/`ByLabelText` (test-id as escape hatch), name tests by behavior.
+- **Tests couplés à l'implémentation** : avant de toucher une valeur CSS, l'ordre du DOM ou l'arbre monté, grepper les tests qui épinglent le couple (constantes JS ↔ feuille, `nextElementSibling`, `vi.mock` partiels) et les mettre à jour dans la MÊME passe. Une assertion d'adjacence se retourne en « même rangée + place stable » plutôt que de se réépingler sur le nouvel ordre. Quand une suppression retire la condition qui rendait un élément invisible, retourner le test en garde-fou inverse (il reste atteignable) au lieu de le supprimer.
 
 **Testing:**
 - Unit tests for individual functions/components
@@ -161,6 +169,9 @@ Apply the team's React/TS conventions proactively — they are distilled from re
 - Format: `feat(component): description` or `fix(component): description`
 - Commit frequently, push regularly
 - Use feature branches (e.g., `feature/STORY-001`)
+- **Lire la config du dépôt avant tout outil global** : `.commitlintrc` plutôt que le format recopié de `git log` (les commits de merge Azure DevOps `#JIRAXXX-0000 feat(...)` ne passent PAS config-conventional, qui exige le type en tête — référence de ticket en FIN de sujet) ; `.prettierrc` (ou la clé `prettier` du `package.json`) avant tout `prettier --write` — sans config, le formateur réécrit tout au style par défaut et noie le vrai diff. Déjà fait ? Restaurer depuis `HEAD` et réappliquer ses éditions à la main.
+- **Ne stager que ses propres chemins, JAMAIS `git add -A`** : l'arbre de travail peut être partagé avec d'autres agents. Vérifier l'intégrité de ses fichiers (grep d'un marqueur) avant de lancer tests et typecheck — un `git stash` voisin efface silencieusement le travail en cours, et un run vert sur l'arbre reverté ne prouve rien. Si le diffstat dépasse ce qu'on a écrit : `reset --soft HEAD~1` puis `reset` (mixed). Faire une COPIE d'un fichier avant toute transformation scriptée (réindentation, `sed`). Sur Windows, un run vitest réécrit tous les `.snap` en LF alors que le dépôt est en CRLF : `git diff --numstat` vide = churn de fin de ligne, `git restore -- "*.snap"` avant de rendre l'arbre.
+- **Poser `--author="Claude <Modèle> <noreply@anthropic.com>"` dès le premier commit**, sans attendre le refus du hook de garde-fou.
 
 ## Technology Adaptability
 
@@ -171,6 +182,7 @@ This skill works with any technology stack. Adapt to the project by:
 3. Using project's testing framework
 4. Matching existing code structure
 5. Respecting project's tooling and workflows
+6. **Calquer le voisin le plus proche et ÉCRIRE l'écart** — quand l'énoncé nomme un chemin ou une techno que le repo n'utilise nulle part, suivre la convention observée chez les voisins (un repo très conventionné rejette plus vite une entorse qu'une consigne littérale) ; quand on demande de « réutiliser le mécanisme existant » et qu'aucun store/mécanisme générique n'existe, calquer le motif du voisin et le DIRE dans le rapport plutôt que de laisser croire à une réutilisation. Même exigence pour un arbitrage de duplication (dupliquer vingt lignes plutôt qu'extraire un composant à 8 props dont la moitié est toujours absente d'un côté) : l'écrire en en-tête du composant.
 
 **Common Stacks Supported:**
 - Frontend: React, Vue, Angular, Svelte, vanilla JS
