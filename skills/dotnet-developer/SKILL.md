@@ -20,6 +20,8 @@ allowed-tools: Read, Write, Edit, Bash, Glob, Grep, TodoWrite, Skill, Task
 
 Base all subsequent work on this updated baseline so it aligns with the team’s most reliable integration branch. If `master` does not exist after fetch, use the repository’s documented default integration branch (often `main`) and state which branch you used. If uncommitted local changes block checkout, stop and surface the situation to the orchestrator unless the task explicitly authorizes stash or discard.
 
+**Exception — la consigne de la tâche prime sur cette étape.** Si la branche est déjà préparée (ou si tu travailles dans un worktree) et que la tâche interdit `checkout master` + `pull`, un `git fetch` seul suffit : le SIGNALER dans le rapport, jamais le contourner en silence.
+
 ## Responsibilities
 
 - Implement user stories from requirements to completion
@@ -83,6 +85,10 @@ When the corresponding `dotnet-*` skills are installed, route the matching phase
 - Check architecture documents for design patterns
 - Identify edge cases and error scenarios
 - Clarify ambiguous requirements with user
+- **Confronter le changement à ce qui le consomme AVANT de conclure** :
+  - toute nouvelle famille d'erreur se confronte aux extensions qui classent les erreurs (`ErrorExtensions.AreNonBlocking`, `CountUneligibleErrors`) — sans rattachement, un cas non bloquant fait basculer le lot entier en échec dans les métriques du consumer ; choisir le rattachement qui ne fausse aucun compteur ;
+  - avant de proposer un héritage, vérifier que les membres exigés par la classe de base sont réellement fournissables par le flux ; si un `null` serait forcé, chercher qui déréférence ce membre sans garde avant de conclure que c'est anodin ;
+  - sur une branche de fix, comparer à `origin/master` (`git diff --stat origin/master...HEAD`) et grepper le numéro de ticket dans `git log` : un ticket peut avoir été corrigé sous un autre ticket déjà mergé.
 
 ### 2. Plan Implementation
 
@@ -126,6 +132,16 @@ dotnet test --collect:"XPlat Code Coverage"
 - Explicit error handling, never swallow errors, never throw errors
 - Comments explain "why" not "what"
 - Follow existing code patterns and style
+- **Documentation XML** : relever la convention de LANGUE sur deux ou trois fichiers voisins avant d'en écrire (ce dépôt documente en anglais). Elle porte l'invariant non évident (« le lot entier est soumis en un seul appel, sans quoi la déduplication n'opère pas »), jamais une paraphrase du nom de la méthode ou de la signature.
+
+**Contrats HTTP (amont / aval) :**
+- Ne pas écraser tous les échecs amont en 502 : un 401/403 du service appelé se relaie tel quel, sinon le front voit une panne serveur là où il manque seulement un droit. Faire remonter le status par le port, pas un simple booléen.
+- Quand une API amont distingue « champ absent » de « champ nul », le garantir par `[JsonIgnore(WhenWritingNull)]` et le verrouiller par un test qui réintroduit les champs : un `null` sérialisé déclenche un 400.
+- Un `HttpMessageHandler` de test renseigne `RequestMessage = request` sur la réponse qu'il fabrique — sans ça Refit part en `NullReferenceException` dans `DefaultApiExceptionFactory` dès que le status est non-2xx, et le chemin d'erreur devient intestable.
+
+**Messaging Kafka & configuration à chaud :**
+- Dérouler le scénario de REBALANCE avant de conclure qu'un correctif est sûr : poller pendant une pause fait avancer la position sur une partition fraîchement assignée (donc non pausée) et perd ses messages — un correctif anti-perte peut ainsi en réintroduire une.
+- Lire les feature flags par `IOptionsMonitor`, jamais `IOptions`, dès qu'ils basculent à chaud (tests BDD avec `configuration.Reload()`, activation par ConfigMap sans redémarrage de pod) : `IOptions` fige un instantané au premier accès et fait silencieusement échouer l'activation.
 
 **Testing:**
 - Unit tests for individual functions and classes
@@ -135,11 +151,22 @@ dotnet test --collect:"XPlat Code Coverage"
 - Test edge cases, error conditions, boundary values
 - Name tests like Should_HaveExpectedResult_When_Condition
 
+**Un test vert ne prouve rien tant qu'il n'a pas pu échouer :**
+- Après avoir écrit un test censé verrouiller une régression, la RÉINTRODUIRE temporairement et vérifier que le test échoue, avant de rendre la main.
+- Quand le code sous test dépend du temps de blocage réel d'un appel externe (`Consume(timeout)`), un mock qui répond instantanément rend le test aveugle aux bugs de durée (double-attente, busy-spin) : simuler le blocage (`Thread.Sleep(timeout)`) et assertter une borne HAUTE, pas seulement une borne basse.
+- Dans un test BDD piloté par un consumer Kafka, ne jamais recopier un `await Task.Delay(n)` fixe depuis un test voisin : attendre la condition par polling borné, le `BatchTimeoutMs` du consumer rend tout délai fixe structurellement flaky.
+- Quand un fichier produit doit être consommé par un AUTRE service, prouver l'interopérabilité en exécutant le vrai code de lecture de ce service (projet jetable référençant sa DLL buildée) : un test qui relit le fichier avec une réimplémentation de l'algorithme peut valider une erreur commune aux deux copies.
+- Avant d'écrire le premier test d'intégration d'un repo, vérifier que le host DÉMARRE réellement avec l'`appsettings.json` du projet de test (une section manquante peut faire throw `Program.cs`) : un squelette de test jamais exécuté ne garantit rien.
+- Quand on retire une instrumentation ou une fonctionnalité, supprimer aussi les tests « négatifs » qui ne vérifiaient que son absence (`Verify(..., Times.Never)`) : une fois le code parti ils ne verrouillent plus rien et donnent l'illusion d'une couverture.
+
 **Git Commits:**
 - Small, focused commits with clear messages
 - Follow conventional commits pattern: `feat(scope): description` or `fix(scope): description`
 - Commit frequently, push regularly
 - Use ticket branches (e.g., `STORY-001`)
+- **Jamais `git add -A`** : sur un repo à générateurs de code (Reqnroll/SpecFlow, `obj/`), les fichiers générés non suivis entrent dans le commit. Relire les fichiers non suivis et poser la règle `.gitignore` manquante AVANT de committer, sinon stager les chemins explicitement et vérifier `git status --short` — le rattrapage coûte un commit de plus quand le force-push est refusé.
+- **Jamais `git checkout -- <file>`** pour annuler une mutation de test temporaire sur un fichier modifié mais non committé : il écrase la vraie modification en cours. Sauvegarder (`cp` hors repo) avant de muter, restaurer par `cp`.
+- **Préserver l'encodage d'origine** : BOM UTF-8, fins de ligne, absence de newline finale. Un diff pollué par l'encodage casse les gates de format en CI. Le prouver par un `git diff master -- <file>` vide, jamais par relecture visuelle — c'est la seule vérification byte-exact.
 
 ## Technology Adaptability
 
@@ -200,6 +227,10 @@ When implementing a story:
    - Document any important decisions
    - Update relevant documentation
    - Report completion with summary
+   - **Signaler dans le rapport plutôt que traiter en silence** :
+     - une spec/doc existante qui documente un type faux (`int32` là où le code manipule un `long`) : documenter le nouveau contenu JUSTE sans propager l'erreur, et signaler l'incohérence plutôt que corriger l'existant hors périmètre ;
+     - un fichier partagé qu'un lot parallèle touche aussi (spec OpenAPI, conf d'environnement) : le nommer en fin de rapport avec la nature du conflit, pour que le merge soit préparé et non subi ;
+     - un écart imposé par la consigne de la tâche (étape Git non jouée, par exemple) : le dire, jamais le contourner en silence.
 
 ## Scripts and Resources
 
