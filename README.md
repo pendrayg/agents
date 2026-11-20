@@ -92,6 +92,8 @@ One rule, one row. The same lesson learned twice does not add a row, it adds a s
 
 `LEARNINGS.md` is short-term memory and costs context on every task. Once a rule has recurred three times — across three *different* sources — `/agent-tune <agent>` promotes it into `SKILL.md` and prunes the rows. That promotion is the actual learning; the rest is just a log.
 
+The whole mechanism is switchable: `/agent-learning off` creates `~/.claude/yy-agents-learning-off`, `/agent-learning on` removes it, no argument shows the current state. While the file exists the hook stays silent and the agents neither read `LEARNINGS.md` nor emit a `SCORE-GATE:` block. Absent by default, so learning is on.
+
 Self-check: `node hooks/test-score-gate.js`.
 
 ---
@@ -103,7 +105,7 @@ Self-check: `node hooks/test-score-gate.js`.
 agents/
 ├── .claude-plugin/plugin.json
 ├── package.json
-├── commands/agent-tune.md
+├── commands/                  agent-tune.md + agent-learning.md
 ├── hooks/                     hooks.json + score-gate.js + test-score-gate.js
 └── skills/
     ├── dotnet-developer/      SKILL.md + LEARNINGS.md + resources/ + templates/

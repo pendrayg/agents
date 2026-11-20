@@ -2,7 +2,7 @@
 /** Self-check for score-gate.js — `node hooks/test-score-gate.js`. */
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { writeFileSync, rmSync, mkdtempSync } from "node:fs";
+import { writeFileSync, rmSync, mkdtempSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
@@ -20,12 +20,13 @@ const toolResult = (id, text) => ({
   message: { content: [{ type: "tool_result", tool_use_id: id, content: text }] },
 });
 
-/** Run the hook over a transcript; returns the parsed decision or null. */
-function run(entries, session, raw) {
+/** Run the hook over a transcript, under `home` as the user's home directory. */
+function run(entries, session, raw, home = dir) {
   const path = join(dir, `${session}.jsonl`);
   writeFileSync(path, raw ?? entries.map((e) => JSON.stringify(e)).join("\n"));
   const out = execFileSync("node", ["--no-warnings", HOOK], {
     input: JSON.stringify({ transcript_path: path, session_id: session }),
+    env: { ...process.env, HOME: home, USERPROFILE: home },
     encoding: "utf8",
   });
   return out.trim() ? JSON.parse(out) : null;
@@ -78,6 +79,13 @@ assert.equal(
     .decision,
   "block"
 );
+
+// Learning switched off: the flag file in the user's home silences the hook.
+const offHome = mkdtempSync(join(tmpdir(), "score-gate-off-"));
+mkdirSync(join(offHome, ".claude"));
+writeFileSync(join(offHome, ".claude", "yy-agents-learning-off"), "");
+assert.equal(run(delivered, "s9", null, offHome), null);
+rmSync(offHome, { recursive: true, force: true });
 
 rmSync(dir, { recursive: true, force: true });
 console.log("ok — score-gate");

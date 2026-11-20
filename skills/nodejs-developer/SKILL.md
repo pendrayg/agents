@@ -433,6 +433,8 @@ Constraints:
 
 ## Learnings and score gate
 
+**This whole section is behind a switch.** Check it once, at the start: `ls ~/.claude/yy-agents-learning-off` (Bash). If the file exists, skip everything below — do not read `LEARNINGS.md`, do not end your report with a `SCORE-GATE:` block.
+
 **Read `./LEARNINGS.md` before planning.** It holds user feedback on your past deliveries. Those rules override your defaults — including anything above in this file.
 
 **End every delivery report with a `SCORE-GATE:` block.** You run as a subagent: your report goes to the orchestrator, which asks the user to score you and records what you must learn. You are the only one who knows where you hesitated, so you supply the candidates:

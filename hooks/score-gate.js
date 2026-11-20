@@ -15,7 +15,10 @@
  */
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
+
+/** Learning switch: the flag file's presence disables the gate entirely. */
+if (existsSync(join(homedir(), ".claude", "yy-agents-learning-off"))) process.exit(0);
 
 const DEV_AGENTS = [
   "dotnet-developer",
